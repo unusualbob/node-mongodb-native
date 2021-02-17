@@ -11,7 +11,7 @@ import {
   MIN_SUPPORTED_WIRE_VERSION,
   MIN_SUPPORTED_SERVER_VERSION
 } from './wire_protocol/constants';
-import type { Document } from '../bson';
+import type { Document, ObjectId } from '../bson';
 
 import type { Socket, SocketConnectOpts } from 'net';
 import type { TLSSocket, ConnectionOptions as TLSConnectionOpts } from 'tls';
@@ -149,6 +149,7 @@ export interface HandshakeDocument extends Document {
   client: ClientMetadata;
   compression: string[];
   saslSupportedMechs?: string;
+  loadBalanced?: boolean;
 }
 
 function prepareHandshakeDocument(authContext: AuthContext, callback: Callback<HandshakeDocument>) {
@@ -158,7 +159,8 @@ function prepareHandshakeDocument(authContext: AuthContext, callback: Callback<H
   const handshakeDoc: HandshakeDocument = {
     ismaster: true,
     client: options.metadata || makeClientMetadata(options),
-    compression: compressors
+    compression: compressors,
+    loadBalanced: options.loadBalanced
   };
 
   const credentials = authContext.credentials;
@@ -295,7 +297,7 @@ function makeConnection(options: ConnectionOptions, _callback: CallbackWithType<
   socket.setNoDelay(noDelay);
 
   const connectEvent = useTLS ? 'secureConnect' : 'connect';
-  let cancellationHandler: (err: Error) => void;
+  let cancellationHandler: (err: Error, serverId?: ObjectId) => void;
   function errorHandler(eventName: ErrorHandlerEventName) {
     return (err: Error) => {
       SOCKET_ERROR_EVENTS.forEach(event => socket.removeAllListeners(event));

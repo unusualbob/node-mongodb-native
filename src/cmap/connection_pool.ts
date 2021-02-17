@@ -18,6 +18,7 @@ import {
   ConnectionCheckedInEvent,
   ConnectionPoolClearedEvent
 } from './events';
+import type { ObjectId } from '../bson';
 
 const kLogger = Symbol('logger');
 const kConnections = Symbol('connections');
@@ -270,6 +271,17 @@ export class ConnectionPool extends EventEmitter {
     this.emit('connectionPoolCleared', new ConnectionPoolClearedEvent(this));
   }
 
+  /**
+   * Close all connections in the pool for the provided serverId.
+   */
+  closeConnections(serverId: ObjectId): void {
+    // cancel in flight matching connections.
+    this[kCancellationToken].emit('cancel', serverId);
+
+    // destroy each matching connection
+    // this.destroyConnections('serverError', {}, serverId, callback);
+  }
+
   /** Close the pool */
   close(callback: Callback<void>): void;
   close(options: CloseOptions, callback: Callback<void>): void;
@@ -314,19 +326,25 @@ export class ConnectionPool extends EventEmitter {
 
     // mark the pool as closed immediately
     this.closed = true;
-
     eachAsync<Connection>(
       this[kConnections].toArray(),
       (conn, cb) => {
+        // Destroy the connection in the case of closing the entire pool
+        // or if the connection matches the server id.
+        //if (!serverId || serverId === conn.serverId) {
         this.emit(
           ConnectionPool.CONNECTION_CLOSED,
           new ConnectionClosedEvent(this, conn, 'poolClosed')
         );
         conn.destroy(options, cb);
+        //}
       },
       err => {
+        // Dont close the entire pool for error on single server.
+        //if (!serverId) {
         this[kConnections].clear();
         this.emit(ConnectionPool.CONNECTION_POOL_CLOSED, new ConnectionPoolClosedEvent(this));
+        //}
         callback(err);
       }
     );
@@ -382,6 +400,7 @@ function connectionIsIdle(pool: ConnectionPool, connection: Connection) {
   return !!(pool.options.maxIdleTimeMS && connection.idleTime > pool.options.maxIdleTimeMS);
 }
 
+// TODO: Durran: In LB mode set the server id on the connection.
 function createConnection(pool: ConnectionPool, callback?: Callback<Connection>) {
   const connectOptions: ConnectionOptions = {
     ...pool.options,

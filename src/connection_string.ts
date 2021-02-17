@@ -31,6 +31,8 @@ import { Logger, LoggerLevelId } from './logger';
 import { PromiseProvider } from './promise_provider';
 import { createAutoEncrypter } from './operations/connect';
 
+const VALID_TXT_RECORDS = ['authSource', 'replicaSet', 'loadBalanced'];
+
 /**
  * Determines whether a provided address matches the provided parent domain in order
  * to avoid certain attack vectors.
@@ -96,9 +98,9 @@ export function resolveSRVRecord(options: MongoOptions, callback: Callback<HostA
 
         const txtRecordOptions = new URLSearchParams(record[0].join(''));
         const txtRecordOptionKeys = [...txtRecordOptions.keys()];
-        if (txtRecordOptionKeys.some(key => key !== 'authSource' && key !== 'replicaSet')) {
+        if (txtRecordOptionKeys.some(key => !VALID_TXT_RECORDS.includes(key))) {
           return callback(
-            new MongoParseError('Text record must only set `authSource` or `replicaSet`')
+            new MongoParseError(`Text record must only set one of: ${VALID_TXT_RECORDS.join(', ')}`)
           );
         }
 
@@ -117,6 +119,8 @@ export function resolveSRVRecord(options: MongoOptions, callback: Callback<HostA
           options.replicaSet = replicaSet;
         }
       }
+
+      validateLoadBalancedOptions(hostAddresses, options);
 
       callback(undefined, hostAddresses);
     });
@@ -433,6 +437,8 @@ export function parseOptions(
     throw new MongoParseError('directConnection not supported with SRV URI');
   }
 
+  validateLoadBalancedOptions(hosts, mongoOptions);
+
   // Potential SRV Overrides
   mongoOptions.userSpecifiedAuthSource =
     objectOptions.has('authSource') || urlOptions.has('authSource');
@@ -440,6 +446,20 @@ export function parseOptions(
     objectOptions.has('replicaSet') || urlOptions.has('replicaSet');
 
   return mongoOptions;
+}
+
+function validateLoadBalancedOptions(hosts: HostAddress[] | string[], mongoOptions: MongoOptions) {
+  if (mongoOptions.loadBalanced) {
+    if (hosts.length > 1) {
+      throw new MongoParseError('loadBalanced option only supported with a single host in the URI');
+    }
+    if (mongoOptions.replicaSet) {
+      throw new MongoParseError('loadBalanced option not supported with a replicaSet option');
+    }
+    if (mongoOptions.directConnection) {
+      throw new MongoParseError('loadBalanced option not supported when directConnection is true');
+    }
+  }
 }
 
 function setOption(
@@ -701,6 +721,10 @@ export const OPTIONS = {
   keepAliveInitialDelay: {
     default: 120000,
     type: 'uint'
+  },
+  loadBalanced: {
+    default: false,
+    type: 'boolean'
   },
   localThresholdMS: {
     default: 15,

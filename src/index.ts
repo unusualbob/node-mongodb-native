@@ -136,6 +136,8 @@ export type {
 } from './bulk/common';
 export type {
   ChangeStream,
+  ChangeStreamDocument,
+  UpdateDescription,
   ChangeStreamOptions,
   ChangeStreamCursor,
   ResumeToken,
@@ -148,7 +150,7 @@ export type { AuthMechanismId } from './cmap/auth/defaultAuthProviders';
 export type { MongoCredentials, MongoCredentialsOptions } from './cmap/auth/mongo_credentials';
 export type {
   WriteProtocolMessageType,
-  Query,
+  Query as __InternalQuery,
   GetMore,
   Msg,
   KillCursor,
@@ -178,7 +180,7 @@ export type {
 } from './cmap/message_stream';
 export type { StreamDescription, StreamDescriptionOptions } from './cmap/stream_description';
 export type { CompressorName } from './cmap/wire_protocol/compression';
-export type { CollectionPrivate, CollectionOptions } from './collection';
+export type { CollectionPrivate, CollectionOptions, ModifyResult } from './collection';
 export type { AggregationCursorOptions } from './cursor/aggregation_cursor';
 export type {
   CursorCloseOptions,
@@ -200,8 +202,8 @@ export type {
 export type { GridFSBucketOptions, GridFSBucketPrivate } from './gridfs-stream/index';
 export type {
   GridFSBucketWriteStreamOptions,
-  TFileId,
-  GridFSBucketWriteStream
+  GridFSBucketWriteStream,
+  GridFSChunk
 } from './gridfs-stream/upload';
 export type { LoggerOptions, LoggerFunction, LoggerLevelId } from './logger';
 export type {
@@ -341,3 +343,17 @@ export type {
 } from './bulk/common';
 export type { OrderedBulkOperation } from './bulk/ordered';
 export type { UnorderedBulkOperation } from './bulk/unordered';
+export type {
+  EnhancedOmit,
+  WithId,
+  OptionalId,
+  WithoutId,
+  UpdateQuery,
+  Query,
+  Projection,
+  InferIdType,
+  WithId as ObjectWithId,
+  ProjectionOperators,
+  MetaProjectionOperators,
+  MetaSortOperators
+} from './mongo_types';
